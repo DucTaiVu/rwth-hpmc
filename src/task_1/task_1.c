@@ -60,6 +60,8 @@ void GEMM_BLAS1(int leni, int lenk, int lenj, float *A, float *B, float *C) {
 void GEMM_BLAS2(int leni, int lenk, int lenj, float *A, float *B, float *C) {
   int k; 
   for(k = 0; k < lenk; k++) {
+    //cblas_sger (CblasRowMajor, OPENBLAS_CONST blasint M, OPENBLAS_CONST blasint N, 1, X, 1, Y, 1, C, lda);
+   
     //cblas_sger (OPENBLAS_CONST enum CBLAS_ORDER order, OPENBLAS_CONST blasint M, OPENBLAS_CONST blasint N, OPENBLAS_CONST float   alpha, OPENBLAS_CONST float  *X, OPENBLAS_CONST blasint incX, OPENBLAS_CONST float  *Y, OPENBLAS_CONST blasint incY, float  *A, OPENBLAS_CONST blasint lda);
   }
 }
@@ -67,7 +69,7 @@ void GEMM_BLAS2(int leni, int lenk, int lenj, float *A, float *B, float *C) {
 
 //BLAS-3 level
 void GEMM_BLAS3(int leni, int lenk, int lenj, float *A, float *B, float *C) {
-  cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans, leni, lenj, lenk, 1, A, 2, B, 2, 1, C, 2);
+  cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans, leni, lenj, lenk, 1, A, leni, B, lenj, 1, C, leni);
 }
 
 int main() {
