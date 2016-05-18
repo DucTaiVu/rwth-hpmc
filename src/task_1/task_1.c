@@ -58,11 +58,13 @@ void GEMM_BLAS1(int leni, int lenk, int lenj, float *A, float *B, float *C) {
 
 //BLAS-2 level
 void GEMM_BLAS2(int leni, int lenk, int lenj, float *A, float *B, float *C) {
-  int k; 
-  for(k = 0; k < lenk; k++) {
-    //cblas_sger (CblasRowMajor, OPENBLAS_CONST blasint M, OPENBLAS_CONST blasint N, 1, X, 1, Y, 1, C, lda);
-   
-    //cblas_sger (OPENBLAS_CONST enum CBLAS_ORDER order, OPENBLAS_CONST blasint M, OPENBLAS_CONST blasint N, OPENBLAS_CONST float   alpha, OPENBLAS_CONST float  *X, OPENBLAS_CONST blasint incX, OPENBLAS_CONST float  *Y, OPENBLAS_CONST blasint incY, float  *A, OPENBLAS_CONST blasint lda);
+  int i; 
+  for(i = 0; i < leni; i++) {
+    float *x = malloc(sizeof(float)*lenk);
+    float *row = malloc(sizeof(float)*lenj);
+    memcpy(x, A+i, sizeof(float)*lenk);
+    cblas_sgemv(CblasRowMajor,  CblasTrans, lenk, lenj, 1, B, lenj,  x, 1,  1, row, 1);
+    memcpy(C+i*lenj, row, sizeof(float)*lenj);
   }
 }
 
@@ -84,7 +86,7 @@ int main() {
   
   GEMM_BLAS0(2, 1, 2, A, B, C_BLAS0);
   GEMM_BLAS1(2, 1, 2, A, B, C_BLAS1);
-  //GEMM_BLAS2(2, 1, 2, A, B, C_BLAS1);
+  GEMM_BLAS2(2, 1, 2, A, B, C_BLAS2);
   GEMM_BLAS3(2, 1, 2, A, B, C_BLAS3);
   
   print_matrix(2, 2, C_BLAS0);
@@ -94,3 +96,10 @@ int main() {
   
   return(0);
 }
+
+//TODO
+//Check all leading dimensios in blas calls.
+//add big matrices for tests
+//check for correctness
+//add timings
+//make the report
