@@ -5,6 +5,11 @@
 #include <cblas.h>
 #include <stdio.h>
 
+#define LENI 2
+#define LENK 3 
+#define LENJ 2
+
+
 void print_matrix(int leni, int lenj, float *matrix) {
   int i, j;
   for(i = 0; i < leni; i++) {
@@ -26,7 +31,7 @@ void zeros(int leni, int lenj, float *C) {
 }
 
 //BLAS-0 level
-void GEMM_BLAS0(int leni, int lenk, int lenj, float *A, float *B, float *C) {
+void GEMM_BLAS0(int leni, int lenj, int lenk, float *A, float *B, float *C) {
   int i, j, k;
   for(i = 0; i < leni; i++) {
     for(j = 0; j < lenj; j++) {
@@ -39,61 +44,65 @@ void GEMM_BLAS0(int leni, int lenk, int lenj, float *A, float *B, float *C) {
 
 
 //BLAS-1 level
-void GEMM_BLAS1(int leni, int lenk, int lenj, float *A, float *B, float *C) {
+void GEMM_BLAS1(int leni, int lenj, int lenk, float *A, float *B, float *C) {
   int i, j; 
   for(i = 0; i < leni; i++) {
+    float *x = malloc(sizeof(float)*lenk);
+    memcpy(x, A+i*lenk, sizeof(float)*lenk);
     for(j = 0; j < lenj; j++) {
-        float *x = malloc(sizeof(float)*lenk);
         float *y = malloc(sizeof(float)*lenk);
-        memcpy(x, A+i, sizeof(float)*lenk);
         int l;
-        for(l=0;l<lenj;l++){
+        for(l=0;l<lenk;l++){
           y[l] = B[j+lenj*l];
         }
         C[lenj*i+j] = cblas_sdot(lenk, x, 1, y, 1);
-        //cblas_sdot(OPENBLAS_CONST blasint n, OPENBLAS_CONST float  *x, OPENBLAS_CONST blasint incx, OPENBLAS_CONST float  *y, OPENBLAS_CONST blasint incy);
     }
   }
 }
 
 //BLAS-2 level
-void GEMM_BLAS2(int leni, int lenk, int lenj, float *A, float *B, float *C) {
+void GEMM_BLAS2(int leni, int lenj, int lenk, float *A, float *B, float *C) {
   int i; 
   for(i = 0; i < leni; i++) {
     float *x = malloc(sizeof(float)*lenk);
     float *row = malloc(sizeof(float)*lenj);
-    memcpy(x, A+i, sizeof(float)*lenk);
-    cblas_sgemv(CblasRowMajor,  CblasTrans, lenk, lenj, 1, B, lenj,  x, 1,  1, row, 1);
+    memcpy(x, A+i*lenk, sizeof(float)*lenk);
+    cblas_sgemv(CblasRowMajor, CblasNoTrans, lenk, lenj, 1, B, lenj,  x, 1,  1, row, lenk);
     memcpy(C+i*lenj, row, sizeof(float)*lenj);
   }
 }
 
 
 //BLAS-3 level
-void GEMM_BLAS3(int leni, int lenk, int lenj, float *A, float *B, float *C) {
-  cblas_sgemm(CblasRowMajor, CblasTrans, CblasNoTrans, leni, lenj, lenk, 1, A, leni, B, lenj, 1, C, leni);
+void GEMM_BLAS3(int leni, int lenj, int lenk, float *A, float *B, float *C) {
+  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, leni, lenj, lenk, 1.0, A, lenk, B, lenj, 1.0, C, lenj);
 }
 
 int main() {
-  float A[2] = {1,2};
-  float B[2] = {3,4};
-  float C[4] = {0,0,0,0};
+
+  //A is leni*lenk matrix
+  //B is lenk*lenj matrix
+  //C is leni*lenj matirx
+  //float A[LENI*LENK] = {1,2};
+  //float B[LENK*LENJ] = {3,4};
+  float A[LENI*LENK] = {1,2,3,4,5,6};
+  float B[LENK*LENJ] = {5,6,7,8,9,10};
   
-  float C_BLAS0[4] = {0,0,0,0};
-  float C_BLAS1[4] = {0,0,0,0};
-  float C_BLAS2[4] = {0,0,0,0};
-  float C_BLAS3[4] = {0,0,0,0};
+  float *C_BLAS0 = (float*)calloc(LENI*LENJ, sizeof(float));
+  float *C_BLAS1 = (float*)calloc(LENI*LENJ, sizeof(float));
+  float *C_BLAS2 = calloc(LENI*LENJ, sizeof(float));
+  float *C_BLAS3 = (float*)calloc(LENI*LENJ, sizeof(float));
+
+  GEMM_BLAS0(LENI, LENJ, LENK, A, B, C_BLAS0);
+  GEMM_BLAS1(LENI, LENJ, LENK, A, B, C_BLAS1);
+  GEMM_BLAS2(LENI, LENJ, LENK, A, B, C_BLAS2);
+  GEMM_BLAS3(LENI, LENJ, LENK, A, B, C_BLAS3);
   
-  GEMM_BLAS0(2, 1, 2, A, B, C_BLAS0);
-  GEMM_BLAS1(2, 1, 2, A, B, C_BLAS1);
-  GEMM_BLAS2(2, 1, 2, A, B, C_BLAS2);
-  GEMM_BLAS3(2, 1, 2, A, B, C_BLAS3);
-  
-  print_matrix(2, 2, C_BLAS0);
-  print_matrix(2, 2, C_BLAS1);
-  print_matrix(2, 2, C_BLAS2);
-  print_matrix(2, 2, C_BLAS3);
-  
+  print_matrix(LENI, LENJ, C_BLAS0);
+  print_matrix(LENI, LENJ, C_BLAS1);
+  print_matrix(LENI, LENJ, C_BLAS2);
+  print_matrix(LENI, LENJ, C_BLAS3);
+ 
   return(0);
 }
 
