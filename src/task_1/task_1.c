@@ -3,9 +3,12 @@
 //test GEMM performance on different BLAST levels
 
 #include <cblas.h>
+#include <time.h>
 #include <stdio.h>
 
+
 #define EPS 0.00001
+#define ITER 10000
 
 #define LENI 2
 #define LENK 3 
@@ -103,34 +106,71 @@ int main() {
   float A[LENI*LENK] = {1,2,3,4,5,6};
   float B[LENK*LENJ] = {5,6,7,8,9,10};
   
-  float *C_BLAS0 = (float*)calloc(LENI*LENJ, sizeof(float));
-  float *C_BLAS1 = (float*)calloc(LENI*LENJ, sizeof(float));
-  float *C_BLAS2 = calloc(LENI*LENJ, sizeof(float));
-  float *C_BLAS3 = (float*)calloc(LENI*LENJ, sizeof(float));
+  int i;  
+  clock_t begin, end;
 
-  GEMM_BLAS0(LENI, LENJ, LENK, A, B, C_BLAS0);
-  GEMM_BLAS1(LENI, LENJ, LENK, A, B, C_BLAS1);
-  GEMM_BLAS2(LENI, LENJ, LENK, A, B, C_BLAS2);
-  GEMM_BLAS3(LENI, LENJ, LENK, A, B, C_BLAS3);
+  begin = clock();
+  float *C_BLAS0;
+  for(i=0;i<ITER;i++){
+    C_BLAS0 = (float*)calloc(LENI*LENJ, sizeof(float));
+    GEMM_BLAS0(LENI, LENJ, LENK, A, B, C_BLAS0);
+  }
+  end = clock();
+  double BLAS0_time = (double)(end-begin) / CLOCKS_PER_SEC;
   
+  begin = clock();
+  float *C_BLAS1;
+  for(i=0;i<ITER;i++){
+    C_BLAS1 = (float*)calloc(LENI*LENJ, sizeof(float));
+    GEMM_BLAS1(LENI, LENJ, LENK, A, B, C_BLAS1);
+  }
+  end = clock();
+  double BLAS1_time = (double)(end-begin) / CLOCKS_PER_SEC;
+  
+  begin = clock();
+  float *C_BLAS2;
+  for(i=0;i<ITER;i++){
+    C_BLAS2 = calloc(LENI*LENJ, sizeof(float));
+    GEMM_BLAS2(LENI, LENJ, LENK, A, B, C_BLAS2);
+  }
+  end = clock();
+  double BLAS2_time = (double)(end-begin) / CLOCKS_PER_SEC;
+   
+  begin = clock();
+  float *C_BLAS3;
+  for(i=0;i<ITER;i++){
+    C_BLAS3 = (float*)calloc(LENI*LENJ, sizeof(float));
+    GEMM_BLAS3(LENI, LENJ, LENK, A, B, C_BLAS3);
+  }
+  end = clock();
+  double BLAS3_time = (double)(end-begin) / CLOCKS_PER_SEC;
+
   //print_matrix(LENI, LENJ, C_BLAS0);
   //print_matrix(LENI, LENJ, C_BLAS1);
   //print_matrix(LENI, LENJ, C_BLAS2);
   //print_matrix(LENI, LENJ, C_BLAS3);
-
+  printf("#####################\n");
   printf("BLAS_0 solution is equal BLAS_1: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS1));
   printf("BLAS_0 solution is equal BLAS_2: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS2));
   printf("BLAS_0 solution is equal BLAS_3: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS3));
   printf("BLAS_1 solution is equal BLAS_2: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS1, C_BLAS2));
   printf("BLAS_1 solution is equal BLAS_3: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS1, C_BLAS3));
   printf("BLAS_2 solution is equal BLAS_3: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS2, C_BLAS3));
+  printf("#####################\n");
+  printf("ITERATIONS DONE: %d\n", ITER);
+  printf("---------------------\n");
+  printf("BLAS0 CPU time: %f, per iteration: %f\n", BLAS0_time, BLAS0_time/ITER);
+  printf("BLAS1 CPU time: %f, per iteration: %f\n", BLAS1_time, BLAS1_time/ITER);
+  printf("BLAS2 CPU time: %f, per iteration: %f\n", BLAS2_time, BLAS2_time/ITER);
+  printf("BLAS3 CPU time: %f, per iteration: %f\n", BLAS3_time, BLAS3_time/ITER);
+  printf("#####################\n");
  
   return(0);
 }
 
 //TODO
-//Check all leading dimensios in blas calls.
+//DONE Check all leading dimensios in blas calls.
+//DONE check for correctness
 //add big matrices for tests
-//check for correctness
-//add timings
+//DONE add timings
 //make the report
