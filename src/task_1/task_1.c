@@ -60,18 +60,19 @@ void GEMM_BLAS1(int leni, int lenj, int lenk, float *A, float *B, float *C) {
   }
 }
 
-//BLAS-2 level
 void GEMM_BLAS2(int leni, int lenj, int lenk, float *A, float *B, float *C) {
-  int i; 
-  for(i = 0; i < leni; i++) {
-    float *x = malloc(sizeof(float)*lenk);
-    float *row = malloc(sizeof(float)*lenj);
-    memcpy(x, A+i*lenk, sizeof(float)*lenk);
-    cblas_sgemv(CblasRowMajor, CblasNoTrans, lenk, lenj, 1, B, lenj,  x, 1,  1, row, lenk);
-    memcpy(C+i*lenj, row, sizeof(float)*lenj);
+  int l;
+  for(l=0; l<lenk; l++){
+    float *x = malloc(sizeof(float)*leni);
+    float *y = malloc(sizeof(float)*lenj);
+    memcpy(y, B+l*lenj, sizeof(float)*lenj);
+    int i;
+    for(i = 0; i < leni; i++) {
+      x[i] = A[l+lenk*i];
+    }
+    cblas_sger(CblasRowMajor, leni, lenj, 1, x, 1, y, 1, C, lenj);
   }
 }
-
 
 //BLAS-3 level
 void GEMM_BLAS3(int leni, int lenj, int lenk, float *A, float *B, float *C) {
