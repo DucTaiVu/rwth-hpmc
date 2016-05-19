@@ -5,6 +5,8 @@
 #include <cblas.h>
 #include <stdio.h>
 
+#define EPS 0.00001
+
 #define LENI 2
 #define LENK 3 
 #define LENJ 2
@@ -79,6 +81,18 @@ void GEMM_BLAS3(int leni, int lenj, int lenk, float *A, float *B, float *C) {
   cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, leni, lenj, lenk, 1.0, A, lenk, B, lenj, 1.0, C, lenj);
 }
 
+
+int check_matrix_eq(int leni, int lenj, float *A, float *B) {
+  //assume that matrices dimensions are the same
+  int i;
+  for(i=0; i<leni*lenj;i++){
+    if(abs(A[i]-B[i])> EPS){
+      return 0;
+    }
+  }
+  return 1;
+}
+
 int main() {
 
   //A is leni*lenk matrix
@@ -99,10 +113,17 @@ int main() {
   GEMM_BLAS2(LENI, LENJ, LENK, A, B, C_BLAS2);
   GEMM_BLAS3(LENI, LENJ, LENK, A, B, C_BLAS3);
   
-  print_matrix(LENI, LENJ, C_BLAS0);
-  print_matrix(LENI, LENJ, C_BLAS1);
-  print_matrix(LENI, LENJ, C_BLAS2);
-  print_matrix(LENI, LENJ, C_BLAS3);
+  //print_matrix(LENI, LENJ, C_BLAS0);
+  //print_matrix(LENI, LENJ, C_BLAS1);
+  //print_matrix(LENI, LENJ, C_BLAS2);
+  //print_matrix(LENI, LENJ, C_BLAS3);
+
+  printf("BLAS_0 solution is equal BLAS_1: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS1));
+  printf("BLAS_0 solution is equal BLAS_2: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS2));
+  printf("BLAS_0 solution is equal BLAS_3: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS3));
+  printf("BLAS_1 solution is equal BLAS_2: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS1, C_BLAS2));
+  printf("BLAS_1 solution is equal BLAS_3: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS1, C_BLAS3));
+  printf("BLAS_2 solution is equal BLAS_3: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS2, C_BLAS3));
  
   return(0);
 }
