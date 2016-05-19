@@ -13,10 +13,16 @@
 #define RANDMAX 10
 
 
-#define LENI 1000
-#define LENK 2000
-#define LENJ 1000
+#define LENI 400
+#define LENK 500
+#define LENJ 400
 
+struct Timing {
+  double total;
+  //double min;
+  //double max;
+  double med;
+};
 
 void print_matrix(int leni, int lenj, float *matrix) {
   int i, j;
@@ -27,15 +33,6 @@ void print_matrix(int leni, int lenj, float *matrix) {
     printf("\n");
   }
   printf("\n");
-}
-
-void zeros(int leni, int lenj, float *C) {
-  int i, j;
-  for(i = 0; i < leni; i++) {
-    for(j = 0; j < lenj; j++) {
-      C[lenj*i+j] = 0;
-    }
-  }
 }
 
 //BLAS-0 level
@@ -53,7 +50,7 @@ void GEMM_BLAS0(int leni, int lenj, int lenk, float *A, float *B, float *C) {
 
 //BLAS-1 level
 void GEMM_BLAS1(int leni, int lenj, int lenk, float *A, float *B, float *C) {
-  int i, j; 
+  int i, j;
   for(i = 0; i < leni; i++) {
     float *x = malloc(sizeof(float)*lenk);
     memcpy(x, A+i*lenk, sizeof(float)*lenk);
@@ -106,63 +103,45 @@ int generate_matrix(int leni, int lenj, float *A) {
   }
 }
 
+struct Timing experiment(int leni, int lenj, int lenk, float *A, float *B, float *C, void (*blas)(int, int, int, float*, float*, float*)){
+  int i;
+  struct Timing t_s;
+  clock_t begin, end;
+  begin = clock();
+  for(i=0;i<ITER;i++){
+    //C = (float*)calloc(LENI*LENJ, sizeof(float));
+    memset(C, 0, sizeof(float)*leni*lenj);
+    blas(LENI, LENJ, LENK, A, B, C);
+  }
+  end = clock();
+  double time = (double)(end-begin) / CLOCKS_PER_SEC;
+  t_s.total = time;
+  t_s.med = time/ITER;
+  return t_s;
+}
+
 int main() {
 
-  //A is leni*lenk matrix
-  //B is lenk*lenj matrix
-  //C is leni*lenj matirx
-  //float A[LENI*LENK] = {1,2};
-  //float B[LENK*LENJ] = {3,4};
-  //float A[LENI*LENK] = {1,2,3,4,5,6};
-  //float B[LENK*LENJ] = {5,6,7,8,9,10};
   float *A = (float*)malloc(LENI*LENK*sizeof(float));
   float *B = (float*)malloc(LENK*LENK*sizeof(float));
   generate_matrix(LENI, LENK, A);
   generate_matrix(LENK, LENJ, B);
 
-  int i;  
-  clock_t begin, end;
+  float *C_BLAS0 = (float*)malloc(LENI*LENJ*sizeof(float));
+  float *C_BLAS1 = (float*)malloc(LENI*LENJ*sizeof(float));
+  float *C_BLAS2 = (float*)malloc(LENI*LENJ*sizeof(float));
+  float *C_BLAS3 = (float*)malloc(LENI*LENJ*sizeof(float));
 
-  begin = clock();
-  float *C_BLAS0;
-  for(i=0;i<ITER;i++){
-    C_BLAS0 = (float*)calloc(LENI*LENJ, sizeof(float));
-    GEMM_BLAS0(LENI, LENJ, LENK, A, B, C_BLAS0);
-  }
-  end = clock();
-  double BLAS0_time = (double)(end-begin) / CLOCKS_PER_SEC;
-  
-  begin = clock();
-  float *C_BLAS1;
-  for(i=0;i<ITER;i++){
-    C_BLAS1 = (float*)calloc(LENI*LENJ, sizeof(float));
-    GEMM_BLAS1(LENI, LENJ, LENK, A, B, C_BLAS1);
-  }
-  end = clock();
-  double BLAS1_time = (double)(end-begin) / CLOCKS_PER_SEC;
-  
-  begin = clock();
-  float *C_BLAS2;
-  for(i=0;i<ITER;i++){
-    C_BLAS2 = calloc(LENI*LENJ, sizeof(float));
-    GEMM_BLAS2(LENI, LENJ, LENK, A, B, C_BLAS2);
-  }
-  end = clock();
-  double BLAS2_time = (double)(end-begin) / CLOCKS_PER_SEC;
-   
-  begin = clock();
-  float *C_BLAS3;
-  for(i=0;i<ITER;i++){
-    C_BLAS3 = (float*)calloc(LENI*LENJ, sizeof(float));
-    GEMM_BLAS3(LENI, LENJ, LENK, A, B, C_BLAS3);
-  }
-  end = clock();
-  double BLAS3_time = (double)(end-begin) / CLOCKS_PER_SEC;
+  struct Timing t0;
+  struct Timing t1;
+  struct Timing t2;
+  struct Timing t3;
 
-  //print_matrix(LENI, LENJ, C_BLAS0);
-  //print_matrix(LENI, LENJ, C_BLAS1);
-  //print_matrix(LENI, LENJ, C_BLAS2);
-  //print_matrix(LENI, LENJ, C_BLAS3);
+  t0 = experiment(LENI, LENJ, LENK, A, B, C_BLAS0, &GEMM_BLAS0);
+  t1 = experiment(LENI, LENJ, LENK, A, B, C_BLAS1, &GEMM_BLAS1);
+  t2 = experiment(LENI, LENJ, LENK, A, B, C_BLAS2, &GEMM_BLAS2);
+  t3 = experiment(LENI, LENJ, LENK, A, B, C_BLAS3, &GEMM_BLAS3);
+
   printf("#####################\n");
   printf("BLAS_0 solution is equal BLAS_1: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS1));
   printf("BLAS_0 solution is equal BLAS_2: %d\n", check_matrix_eq(LENI, LENJ, C_BLAS0, C_BLAS2));
@@ -173,18 +152,19 @@ int main() {
   printf("#####################\n");
   printf("ITERATIONS DONE: %d\n", ITER);
   printf("---------------------\n");
-  printf("BLAS0 CPU time: %f, per iteration: %f\n", BLAS0_time, BLAS0_time/ITER);
-  printf("BLAS1 CPU time: %f, per iteration: %f\n", BLAS1_time, BLAS1_time/ITER);
-  printf("BLAS2 CPU time: %f, per iteration: %f\n", BLAS2_time, BLAS2_time/ITER);
-  printf("BLAS3 CPU time: %f, per iteration: %f\n", BLAS3_time, BLAS3_time/ITER);
+  //printf("BLAS0 CPU time: %f, per iteration: %f\n", BLAS0_time, BLAS0_time/ITER);
+  printf("BLAS0 CPU time: %f, per iteration: %f\n", t0.total, t0.med);
+  printf("BLAS1 CPU time: %f, per iteration: %f\n", t1.total, t1.med);
+  printf("BLAS2 CPU time: %f, per iteration: %f\n", t2.total, t2.med);
+  printf("BLAS3 CPU time: %f, per iteration: %f\n", t3.total, t3.med);
   printf("#####################\n");
- 
+
   return(0);
 }
 
 //TODO
 //DONE Check all leading dimensios in blas calls.
 //DONE check for correctness
-//add big matrices for tests
+//DONE add big matrices for tests
 //DONE add timings
 //make the report
