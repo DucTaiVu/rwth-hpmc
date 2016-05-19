@@ -7,21 +7,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #define EPS 0.00001
 #define ITER 10
 #define RANDMAX 10
 
-
-#define LENI 400
-#define LENK 500
-#define LENJ 400
+#define LENI 200
+#define LENK 300
+#define LENJ 200
 
 struct Timing {
   double total;
-  //double min;
-  //double max;
-  double med;
+  double min;
+  double max;
+  double mean;
 };
 
 void print_matrix(int leni, int lenj, float *matrix) {
@@ -106,17 +106,35 @@ int generate_matrix(int leni, int lenj, float *A) {
 struct Timing experiment(int leni, int lenj, int lenk, float *A, float *B, float *C, void (*blas)(int, int, int, float*, float*, float*)){
   int i;
   struct Timing t_s;
-  clock_t begin, end;
+  clock_t begin, end, cb, ce;
+  double *attempts_t = malloc(sizeof(double)*ITER);
+
   begin = clock();
   for(i=0;i<ITER;i++){
+    cb = clock();
     //C = (float*)calloc(LENI*LENJ, sizeof(float));
     memset(C, 0, sizeof(float)*leni*lenj);
     blas(LENI, LENJ, LENK, A, B, C);
+    ce = clock();
+    attempts_t[i] = (double)(ce-cb)/CLOCKS_PER_SEC;
   }
   end = clock();
   double time = (double)(end-begin) / CLOCKS_PER_SEC;
+
+  double min_t = INFINITY; 
+  double max_t = 0;
+  for(i=0; i<ITER;i++){
+    if (max_t < attempts_t[i]) {
+      max_t = attempts_t[i];
+    }
+    if (min_t > attempts_t[i]) {
+      min_t = attempts_t[i];
+    }
+  }
   t_s.total = time;
-  t_s.med = time/ITER;
+  t_s.mean = time/ITER;
+  t_s.min = min_t;
+  t_s.max = max_t;
   return t_s;
 }
 
@@ -152,18 +170,19 @@ int main() {
   printf("#####################\n");
   printf("ITERATIONS DONE: %d\n", ITER);
   printf("---------------------\n");
-  //printf("BLAS0 CPU time: %f, per iteration: %f\n", BLAS0_time, BLAS0_time/ITER);
-  printf("BLAS0 CPU time: %f, per iteration: %f\n", t0.total, t0.med);
-  printf("BLAS1 CPU time: %f, per iteration: %f\n", t1.total, t1.med);
-  printf("BLAS2 CPU time: %f, per iteration: %f\n", t2.total, t2.med);
-  printf("BLAS3 CPU time: %f, per iteration: %f\n", t3.total, t3.med);
+
+  //mean, max and min are per iteration
+  printf("BLAS0 CPU total time: %f, mean: %f, min: %f, max: %f\n", t0.total, t0.mean, t0.min, t0.max);
+  printf("BLAS1 CPU total time: %f, mean: %f, min: %f, max: %f\n", t1.total, t1.mean, t1.min, t1.max);
+  printf("BLAS2 CPU total time: %f, mean: %f, min: %f, max: %f\n", t2.total, t2.mean, t2.min, t2.max);
+  printf("BLAS3 CPU total time: %f, mean: %f, min: %f, max: %f\n", t3.total, t3.mean, t3.min, t3.max);
   printf("#####################\n");
 
   return(0);
 }
 
 //TODO
-//DONE Check all leading dimensios in blas calls.
+//DONE Check all leading dimensions in blas calls.
 //DONE check for correctness
 //DONE add big matrices for tests
 //DONE add timings
