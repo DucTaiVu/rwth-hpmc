@@ -5,14 +5,17 @@
 #include <cblas.h>
 #include <time.h>
 #include <stdio.h>
-
+#include <stdlib.h>
+#include <string.h>
 
 #define EPS 0.00001
-#define ITER 10000
+#define ITER 10
+#define RANDMAX 10
 
-#define LENI 2
-#define LENK 3 
-#define LENJ 2
+
+#define LENI 1000
+#define LENK 2000
+#define LENJ 1000
 
 
 void print_matrix(int leni, int lenj, float *matrix) {
@@ -96,6 +99,13 @@ int check_matrix_eq(int leni, int lenj, float *A, float *B) {
   return 1;
 }
 
+int generate_matrix(int leni, int lenj, float *A) {
+  int i;
+  for(i=0;i<leni*lenj;i++){
+    A[i] = rand()*RANDMAX;
+  }
+}
+
 int main() {
 
   //A is leni*lenk matrix
@@ -103,9 +113,13 @@ int main() {
   //C is leni*lenj matirx
   //float A[LENI*LENK] = {1,2};
   //float B[LENK*LENJ] = {3,4};
-  float A[LENI*LENK] = {1,2,3,4,5,6};
-  float B[LENK*LENJ] = {5,6,7,8,9,10};
-  
+  //float A[LENI*LENK] = {1,2,3,4,5,6};
+  //float B[LENK*LENJ] = {5,6,7,8,9,10};
+  float *A = (float*)malloc(LENI*LENK*sizeof(float));
+  float *B = (float*)malloc(LENK*LENK*sizeof(float));
+  generate_matrix(LENI, LENK, A);
+  generate_matrix(LENK, LENJ, B);
+
   int i;  
   clock_t begin, end;
 
