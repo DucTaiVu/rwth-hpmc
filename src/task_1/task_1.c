@@ -9,19 +9,26 @@
 #include <string.h>
 #include <math.h>
 
+#define get_ticks(var) {\
+      unsigned int __a, __d;\
+      asm volatile("rdtsc" : "=a" (__a), "=d" (__d));\
+      var = ((unsigned long) __a) | (((unsigned long) __d) << 32); \
+   } while(0)
+
 #define EPS 0.00001
-#define ITER 100
+#define ITER 10
 #define RANDMAX 10
 
-#define LENI 1000
-#define LENK 1500
-#define LENJ 1000
+#define LENI 100
+#define LENK 150
+#define LENJ 100
 
 struct Timing {
   double total;
   double min;
   double max;
   double mean;
+  unsigned long ticks;
 };
 
 void print_matrix(int leni, int lenj, float *matrix) {
@@ -113,21 +120,23 @@ struct Timing experiment(int leni, int lenj, int lenk, float *A, float *B, float
   int i;
   struct Timing t_s;
   clock_t begin, end, cb, ce;
+  unsigned long ticksb, tickse; 
   double *attempts_t = malloc(sizeof(double)*ITER);
 
   begin = clock();
+  get_ticks(ticksb);
   for(i=0;i<ITER;i++){
     cb = clock();
-    //C = (float*)calloc(LENI*LENJ, sizeof(float));
     memset(C, 0, sizeof(float)*leni*lenj);
     blas(LENI, LENJ, LENK, A, B, C);
     ce = clock();
     attempts_t[i] = (double)(ce-cb)/CLOCKS_PER_SEC;
   }
+  get_ticks(tickse);
   end = clock();
   double time = (double)(end-begin) / CLOCKS_PER_SEC;
 
-  double min_t = INFINITY; 
+  double min_t = INFINITY;
   double max_t = 0;
   for(i=0; i<ITER;i++){
     if (max_t < attempts_t[i]) {
@@ -141,6 +150,7 @@ struct Timing experiment(int leni, int lenj, int lenk, float *A, float *B, float
   t_s.mean = time/ITER;
   t_s.min = min_t;
   t_s.max = max_t;
+  t_s.ticks = tickse-ticksb;
   free(attempts_t);
   return t_s;
 }
@@ -179,10 +189,10 @@ int main() {
   printf("---------------------\n");
 
   //mean, max and min are per iteration
-  printf("BLAS0 CPU total time: %f, mean: %f, min: %f, max: %f\n", t0.total, t0.mean, t0.min, t0.max);
-  printf("BLAS1 CPU total time: %f, mean: %f, min: %f, max: %f\n", t1.total, t1.mean, t1.min, t1.max);
-  printf("BLAS2 CPU total time: %f, mean: %f, min: %f, max: %f\n", t2.total, t2.mean, t2.min, t2.max);
-  printf("BLAS3 CPU total time: %f, mean: %f, min: %f, max: %f\n", t3.total, t3.mean, t3.min, t3.max);
+  printf("BLAS0 CPU total time: %f, mean: %f, min: %f, max: %f, %.2f ops/sec\n", t0.total, t0.mean, t0.min, t0.max, t0.ticks/t0.total);
+  printf("BLAS1 CPU total time: %f, mean: %f, min: %f, max: %f, %.2f ops/sec\n", t1.total, t1.mean, t1.min, t1.max, t1.ticks/t1.total);
+  printf("BLAS2 CPU total time: %f, mean: %f, min: %f, max: %f, %.2f ops/sec\n", t2.total, t2.mean, t2.min, t2.max, t2.ticks/t2.total);
+  printf("BLAS3 CPU total time: %f, mean: %f, min: %f, max: %f, %.2f ops/sec\n", t3.total, t3.mean, t3.min, t3.max, t3.ticks/t3.total);
   printf("#####################\n");
 
   free(A);
