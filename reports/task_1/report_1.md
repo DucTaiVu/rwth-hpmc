@@ -1,8 +1,12 @@
 # High-Performance Matrix Computations Homework#1
 
+## task_1
+
+Implement GEMM on 4 BLAS levels (BLAS0 is for nested loops) and measure the performance.
+
 ## Implementation
 
-Implemented 4 functions to compute matrix matrix computation on different BLAS levels:
+I implemented 4 functions to compute matrix matrix computation on different BLAS levels:
 
 * BLAS-0 (just three nested loops)
 * BLAS-1 with cblas_ddot()
@@ -10,6 +14,17 @@ Implemented 4 functions to compute matrix matrix computation on different BLAS l
 * BLAS-3 with cblas_dgemm()
 
 All the code is written in C with the use of [OpenBLAS](https://github.com/xianyi/OpenBLAS) library.
+
+A and B matrices were generated with the following function before the experiments:
+
+```c
+int generate_matrix(int leni, int lenj, double *A) {
+  int i;
+  for(i=0;i<leni*lenj;i++){
+    A[i] = rand()*RANDMAX;
+  }
+}
+```
 
 ## Validation
 
@@ -132,7 +147,7 @@ NUMA node0 CPU(s):     0-7
 ```
 ## Explanation
 
-Memory is expensive in terms of access time. That means: the more we use it (relatively to the number of operations), the worse our performance is. For every memory access operation BLAS3 level uses the most number of computations and that makes it the winner.
+Memory is expensive in terms of access time. That means: the more we use it (relatively to the number of operations), the worse our performance is. For every memory access operation BLAS3 level uses the most number of computations (in comparison to the other levels) and that makes it the winner.
 
 I have some doubts about the implementation of BLAS1 and BLAS2 levels. When I want to get the column vector, I do the following:
 

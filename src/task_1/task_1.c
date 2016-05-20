@@ -54,7 +54,6 @@ void GEMM_BLAS0(int leni, int lenj, int lenk, double *A, double *B, double *C) {
   }
 }
 
-
 //BLAS-1 level
 void GEMM_BLAS1(int leni, int lenj, int lenk, double *A, double *B, double *C) {
   int i, j;
