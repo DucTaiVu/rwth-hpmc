@@ -10,12 +10,12 @@
 #include <math.h>
 
 #define EPS 0.00001
-#define ITER 10
+#define ITER 100
 #define RANDMAX 10
 
-#define LENI 200
-#define LENK 300
-#define LENJ 200
+#define LENI 1000
+#define LENK 1500
+#define LENJ 1000
 
 struct Timing {
   double total;
@@ -51,8 +51,8 @@ void GEMM_BLAS0(int leni, int lenj, int lenk, float *A, float *B, float *C) {
 //BLAS-1 level
 void GEMM_BLAS1(int leni, int lenj, int lenk, float *A, float *B, float *C) {
   int i, j;
+  float *x = malloc(sizeof(float)*lenk);
   for(i = 0; i < leni; i++) {
-    float *x = malloc(sizeof(float)*lenk);
     memcpy(x, A+i*lenk, sizeof(float)*lenk);
     for(j = 0; j < lenj; j++) {
         float *y = malloc(sizeof(float)*lenk);
@@ -61,15 +61,19 @@ void GEMM_BLAS1(int leni, int lenj, int lenk, float *A, float *B, float *C) {
           y[l] = B[j+lenj*l];
         }
         C[lenj*i+j] = cblas_sdot(lenk, x, 1, y, 1);
+        free(y);
     }
   }
+  free(x);
 }
 
 void GEMM_BLAS2(int leni, int lenj, int lenk, float *A, float *B, float *C) {
   int l;
+  float *x;
+  float *y = malloc(sizeof(float)*lenj);
+
   for(l=0; l<lenk; l++){
-    float *x = malloc(sizeof(float)*leni);
-    float *y = malloc(sizeof(float)*lenj);
+    x = malloc(sizeof(float)*leni);
     memcpy(y, B+l*lenj, sizeof(float)*lenj);
     int i;
     for(i = 0; i < leni; i++) {
@@ -77,6 +81,8 @@ void GEMM_BLAS2(int leni, int lenj, int lenk, float *A, float *B, float *C) {
     }
     cblas_sger(CblasRowMajor, leni, lenj, 1, x, 1, y, 1, C, lenj);
   }
+  free(x);
+  free(y);
 }
 
 //BLAS-3 level
@@ -135,6 +141,7 @@ struct Timing experiment(int leni, int lenj, int lenk, float *A, float *B, float
   t_s.mean = time/ITER;
   t_s.min = min_t;
   t_s.max = max_t;
+  free(attempts_t);
   return t_s;
 }
 
@@ -177,6 +184,13 @@ int main() {
   printf("BLAS2 CPU total time: %f, mean: %f, min: %f, max: %f\n", t2.total, t2.mean, t2.min, t2.max);
   printf("BLAS3 CPU total time: %f, mean: %f, min: %f, max: %f\n", t3.total, t3.mean, t3.min, t3.max);
   printf("#####################\n");
+
+  free(A);
+  free(B);
+  free(C_BLAS0);
+  free(C_BLAS1);
+  free(C_BLAS2);
+  free(C_BLAS3);
 
   return(0);
 }
