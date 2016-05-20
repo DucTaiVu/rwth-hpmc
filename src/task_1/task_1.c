@@ -16,12 +16,12 @@
    } while(0)
 
 #define EPS 0.00001
-#define ITER 10
+#define ITER 100
 #define RANDMAX 10
 
-#define LENI 100
-#define LENK 150
-#define LENJ 100
+#define LENI 1000
+#define LENK 1500
+#define LENJ 1000
 
 struct Timing {
   double total;
@@ -31,7 +31,7 @@ struct Timing {
   unsigned long ticks;
 };
 
-void print_matrix(int leni, int lenj, float *matrix) {
+void print_matrix(int leni, int lenj, double *matrix) {
   int i, j;
   for(i = 0; i < leni; i++) {
     for(j = 0; j < lenj; j++) {
@@ -43,7 +43,7 @@ void print_matrix(int leni, int lenj, float *matrix) {
 }
 
 //BLAS-0 level
-void GEMM_BLAS0(int leni, int lenj, int lenk, float *A, float *B, float *C) {
+void GEMM_BLAS0(int leni, int lenj, int lenk, double *A, double *B, double *C) {
   int i, j, k;
   for(i = 0; i < leni; i++) {
     for(j = 0; j < lenj; j++) {
@@ -56,49 +56,49 @@ void GEMM_BLAS0(int leni, int lenj, int lenk, float *A, float *B, float *C) {
 
 
 //BLAS-1 level
-void GEMM_BLAS1(int leni, int lenj, int lenk, float *A, float *B, float *C) {
+void GEMM_BLAS1(int leni, int lenj, int lenk, double *A, double *B, double *C) {
   int i, j;
-  float *x = malloc(sizeof(float)*lenk);
+  double *x = malloc(sizeof(double)*lenk);
   for(i = 0; i < leni; i++) {
-    memcpy(x, A+i*lenk, sizeof(float)*lenk);
+    memcpy(x, A+i*lenk, sizeof(double)*lenk);
     for(j = 0; j < lenj; j++) {
-        float *y = malloc(sizeof(float)*lenk);
+        double *y = malloc(sizeof(double)*lenk);
         int l;
         for(l=0;l<lenk;l++){
           y[l] = B[j+lenj*l];
         }
-        C[lenj*i+j] = cblas_sdot(lenk, x, 1, y, 1);
+        C[lenj*i+j] = cblas_ddot(lenk, x, 1, y, 1);
         free(y);
     }
   }
   free(x);
 }
 
-void GEMM_BLAS2(int leni, int lenj, int lenk, float *A, float *B, float *C) {
+void GEMM_BLAS2(int leni, int lenj, int lenk, double *A, double *B, double *C) {
   int l;
-  float *x;
-  float *y = malloc(sizeof(float)*lenj);
+  double *x;
+  double *y = malloc(sizeof(double)*lenj);
 
   for(l=0; l<lenk; l++){
-    x = malloc(sizeof(float)*leni);
-    memcpy(y, B+l*lenj, sizeof(float)*lenj);
+    x = malloc(sizeof(double)*leni);
+    memcpy(y, B+l*lenj, sizeof(double)*lenj);
     int i;
     for(i = 0; i < leni; i++) {
       x[i] = A[l+lenk*i];
     }
-    cblas_sger(CblasRowMajor, leni, lenj, 1, x, 1, y, 1, C, lenj);
+    cblas_dger(CblasRowMajor, leni, lenj, 1, x, 1, y, 1, C, lenj);
   }
   free(x);
   free(y);
 }
 
 //BLAS-3 level
-void GEMM_BLAS3(int leni, int lenj, int lenk, float *A, float *B, float *C) {
-  cblas_sgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, leni, lenj, lenk, 1.0, A, lenk, B, lenj, 1.0, C, lenj);
+void GEMM_BLAS3(int leni, int lenj, int lenk, double *A, double *B, double *C) {
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, leni, lenj, lenk, 1.0, A, lenk, B, lenj, 1.0, C, lenj);
 }
 
 
-int check_matrix_eq(int leni, int lenj, float *A, float *B) {
+int check_matrix_eq(int leni, int lenj, double *A, double *B) {
   //assume that matrices dimensions are the same
   int i;
   for(i=0; i<leni*lenj;i++){
@@ -109,25 +109,25 @@ int check_matrix_eq(int leni, int lenj, float *A, float *B) {
   return 1;
 }
 
-int generate_matrix(int leni, int lenj, float *A) {
+int generate_matrix(int leni, int lenj, double *A) {
   int i;
   for(i=0;i<leni*lenj;i++){
     A[i] = rand()*RANDMAX;
   }
 }
 
-struct Timing experiment(int leni, int lenj, int lenk, float *A, float *B, float *C, void (*blas)(int, int, int, float*, float*, float*)){
+struct Timing experiment(int leni, int lenj, int lenk, double *A, double *B, double *C, void (*blas)(int, int, int, double*, double*, double*)){
   int i;
   struct Timing t_s;
   clock_t begin, end, cb, ce;
-  unsigned long ticksb, tickse; 
+  unsigned long ticksb, tickse;
   double *attempts_t = malloc(sizeof(double)*ITER);
 
   begin = clock();
   get_ticks(ticksb);
   for(i=0;i<ITER;i++){
     cb = clock();
-    memset(C, 0, sizeof(float)*leni*lenj);
+    memset(C, 0, sizeof(double)*leni*lenj);
     blas(LENI, LENJ, LENK, A, B, C);
     ce = clock();
     attempts_t[i] = (double)(ce-cb)/CLOCKS_PER_SEC;
@@ -157,15 +157,15 @@ struct Timing experiment(int leni, int lenj, int lenk, float *A, float *B, float
 
 int main() {
 
-  float *A = (float*)malloc(LENI*LENK*sizeof(float));
-  float *B = (float*)malloc(LENK*LENK*sizeof(float));
+  double *A = (double*)malloc(LENI*LENK*sizeof(double));
+  double *B = (double*)malloc(LENK*LENK*sizeof(double));
   generate_matrix(LENI, LENK, A);
   generate_matrix(LENK, LENJ, B);
 
-  float *C_BLAS0 = (float*)malloc(LENI*LENJ*sizeof(float));
-  float *C_BLAS1 = (float*)malloc(LENI*LENJ*sizeof(float));
-  float *C_BLAS2 = (float*)malloc(LENI*LENJ*sizeof(float));
-  float *C_BLAS3 = (float*)malloc(LENI*LENJ*sizeof(float));
+  double *C_BLAS0 = (double*)malloc(LENI*LENJ*sizeof(double));
+  double *C_BLAS1 = (double*)malloc(LENI*LENJ*sizeof(double));
+  double *C_BLAS2 = (double*)malloc(LENI*LENJ*sizeof(double));
+  double *C_BLAS3 = (double*)malloc(LENI*LENJ*sizeof(double));
 
   struct Timing t0;
   struct Timing t1;
@@ -204,10 +204,3 @@ int main() {
 
   return(0);
 }
-
-//TODO
-//DONE Check all leading dimensions in blas calls.
-//DONE check for correctness
-//DONE add big matrices for tests
-//DONE add timings
-//make the report

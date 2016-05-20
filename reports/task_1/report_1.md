@@ -5,9 +5,9 @@
 Implemented 4 functions to compute matrix matrix computation on different BLAS levels:
 
 * BLAS-0 (just three nested loops)
-* BLAS-1 with cblas_sdot()
-* BLAS-2 with cblas_sger()
-* BLAS-3 with cblas_sgemm()
+* BLAS-1 with cblas_ddot()
+* BLAS-2 with cblas_dger()
+* BLAS-3 with cblas_dgemm()
 
 All the code is written in C with the use of [OpenBLAS](https://github.com/xianyi/OpenBLAS) library.
 
@@ -19,7 +19,7 @@ The validation was done with the use of check_matrix_eq() function.
 ```c
 #define EPS 0.00001
 
-int check_matrix_eq(int leni, int lenj, float *A, float *B) {
+int check_matrix_eq(int leni, int lenj, double *A, double *B) {
   //assume that matrices dimensions are the same
   int i;
   for(i=0; i<leni*lenj;i++){
@@ -39,13 +39,23 @@ Timing was done like this:
 
 ```c
 begin = clock();
-float *C_BLAS2;
+double *C_BLAS2;
 for(i=0;i<ITER;i++){
-	C_BLAS2 = calloc(LENI*LENJ, sizeof(float));
+	C_BLAS2 = calloc(LENI*LENJ, sizeof(double));
 	GEMM_BLAS2(LENI, LENJ, LENK, A, B, C_BLAS2);
 }
 end = clock();
 double BLAS2_time = (double)(end-begin) / CLOCKS_PER_SEC;                  
+```
+
+For counting clocks I used code from [lecture(28.04)](http://hpac.rwth-aachen.de/teaching/hpmc-16/gemm.c):
+
+```c
+#define get_ticks(var) {\
+      unsigned int __a, __d;\
+      asm volatile("rdtsc" : "=a" (__a), "=d" (__d));\
+      var = ((unsigned long) __a) | (((unsigned long) __d) << 32);\
+   } while(0)
 ```
 
 For each experiment I keep track of total CPU time, mean and also min and max.
@@ -60,13 +70,13 @@ Flat profile:
 Each sample counts as 0.01 seconds.
   %   cumulative   self              self     total           
  time   seconds   seconds    calls   s/call   s/call  name    
- 63.74    664.86   664.86      100     6.65     6.65  GEMM_BLAS0
- 36.47   1045.26   380.40      100     3.80     3.80  GEMM_BLAS1
-  0.00   1045.27     0.01      100     0.00     0.00  GEMM_BLAS2
-  0.00   1045.27     0.00      100     0.00     0.00  GEMM_BLAS3
-  0.00   1045.27     0.00        6     0.00     0.00  check_matrix_eq
-  0.00   1045.27     0.00        4     0.00   261.32  experiment
-  0.00   1045.27     0.00        2     0.00     0.00  generate_matrix
+ 64.96    949.12   949.12      100     9.49     9.49  GEMM_BLAS0
+ 35.23   1463.92   514.80      100     5.15     5.15  GEMM_BLAS1
+  0.00   1463.93     0.01      100     0.00     0.00  GEMM_BLAS2
+  0.00   1463.94     0.01        2     0.01     0.01  generate_matrix
+  0.00   1463.94     0.00      100     0.00     0.00  GEMM_BLAS3
+  0.00   1463.94     0.00        6     0.00     0.00  check_matrix_eq
+  0.00   1463.94     0.00        4     0.00   365.98  experiment
 ```
 
 Own output:
@@ -74,21 +84,20 @@ Own output:
 ```bash
 yobibyte@yobibox:~/dev/rwth-hpmc/src/task_1$ ./task_1
 #####################
-BLAS_0 solution is equal BLAS_1: 1
+BLAS_0 solution is equal BLAS_1: 0
 BLAS_0 solution is equal BLAS_2: 1
-BLAS_0 solution is equal BLAS_3: 1
-BLAS_1 solution is equal BLAS_2: 1
-BLAS_1 solution is equal BLAS_3: 1
-BLAS_2 solution is equal BLAS_3: 1
+BLAS_0 solution is equal BLAS_3: 0
+BLAS_1 solution is equal BLAS_2: 0
+BLAS_1 solution is equal BLAS_3: 0
+BLAS_2 solution is equal BLAS_3: 0
 #####################
 ITERATIONS DONE: 100
 ---------------------
-BLAS0 CPU total time: 664.337427, mean: 6.643374, min: 6.263151, max: 7.972335
-BLAS1 CPU total time: 429.253302, mean: 4.292533, min: 3.986296, max: 4.969887
-BLAS2 CPU total time: 63.825768, mean: 0.638258, min: 0.620586, max: 0.708239
-BLAS3 CPU total time: 9.702461, mean: 0.097025, min: 0.093930, max: 0.115957
+BLAS0 CPU total time: 948.227814, mean: 9.482278, min: 9.330081, max: 10.041187, 3190086430.82 ops/sec
+BLAS1 CPU total time: 555.193761, mean: 5.551938, min: 5.506249, max: 5.733648, 3190045566.94 ops/sec
+BLAS2 CPU total time: 142.553713, mean: 1.425537, min: 1.413036, max: 1.742058, 399334977.06 ops/sec
+BLAS3 CPU total time: 18.992372, mean: 0.189924, min: 0.175772, max: 0.205268, 399297589.53 ops/sec
 #####################
-
 ```
 
 ## Architecture details
@@ -136,11 +145,11 @@ for(l=0;l<lenk;l++){
 
 May be there is a more efficient way to do this operation, but I haven't come out with that.
 
+Also there are some doubts about memory allocation operations. They may also smash the results. Needs additional check.
+
 ## TODO
 
 Unfortunately, due to the lack of time, the following wasn't done:
 
 * In cache vs. out of cache boundaries
-* Performance/Efficiency calculations
 * Paying attention to cache usage!
-*
